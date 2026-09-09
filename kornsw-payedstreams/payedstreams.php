@@ -1,8 +1,10 @@
 <?php
 /**
  * Plugin Name: KornSW PayedStreams
+ * Update URI: https://raw.githubusercontent.com/KornSW/WP-PayedStreams/master/doc/kornsw-payedstreams.update.json
+ * Plugin URI: https://github.com/KornSW/WP-PayedStreams
  * Description: Verbindet WordPress, Digistore24 und Bunny Stream zu einer zentralen Mediathek mit Kauf-, Rollen- und Benutzerberechtigungen.
- * Version: 1.0.6
+ * Version: 1.0.7
  * Author: KornSW
  * Text Domain: kornsw-payedstreams
  */
@@ -10,6 +12,13 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+
+/*************** SELF-UPDATE ***************/
+define( 'KSWKORNSWPAYEDSFB02_SELF_UPDATE_DIAGNOSTICS', false );
+require_once __DIR__ . '/self-update.php';
+kswkornswpayedsfb02_bootstrap( __FILE__ );
+/*******************************************/
 
 define('KORNSW_PAYEDSTREAMS_VERSION', '1.0.6');
 define('KORNSW_PAYEDSTREAMS_FILE', __FILE__);
