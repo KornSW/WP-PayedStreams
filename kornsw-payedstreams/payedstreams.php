@@ -4,7 +4,7 @@
  * Update URI: https://raw.githubusercontent.com/KornSW/WP-PayedStreams/master/doc/kornsw-payedstreams.update.json
  * Plugin URI: https://github.com/KornSW/WP-PayedStreams
  * Description: Verbindet WordPress, Digistore24 und Bunny Stream zu einer zentralen Mediathek mit Kauf-, Rollen- und Benutzerberechtigungen.
- * Version: 1.0.7
+ * Version: 1.0.8
  * Author: KornSW
  * Text Domain: kornsw-payedstreams
  */

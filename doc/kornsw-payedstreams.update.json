@@ -1,14 +1,14 @@
 {
   "name": "KornSW PayedStreams",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "author": "KornSW",
   "homepage": "https://github.com/KornSW/WP-PayedStreams",
-  "download_url": "https://github.com/KornSW/WP-PayedStreams/releases/download/v1.0.7/kornsw-payedstreams.zip",
+  "download_url": "https://github.com/KornSW/WP-PayedStreams/releases/download/v1.0.8/kornsw-payedstreams.zip",
   "requires": "",
   "requires_php": "",
   "tested": "",
   "sections": {
     "description": "Verbindet WordPress, Digistore24 und Bunny Stream zu einer zentralen Mediathek mit Kauf-, Rollen- und Benutzerberechtigungen.",
-    "changelog": "<h4>Version 1.0.7</h4><ul><li>moved **MVP** from internal Repo to here...</li></ul>"
+    "changelog": "<h4>Version 1.0.8</h4><ul><li>Zeitsortierung und Suchfunktion</li><li>Zeit-Sortierung und Suchfunktion</li></ul>"
   }
 }
