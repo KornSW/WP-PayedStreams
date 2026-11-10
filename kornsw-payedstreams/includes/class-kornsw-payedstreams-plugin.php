@@ -4,7 +4,7 @@ class KornSW_PayedStreams_Plugin
 {
     public function Run()
     {
-        if (get_option('kornsw_ps_db_version') !== KORNSW_PAYEDSTREAMS_VERSION) { KornSW_PayedStreams_Activator::EnsureSchema(); }
+        if (get_option('kornsw_ps_db_version') !== KORNSW_PAYEDSTREAMS_VERSION || KornSW_PayedStreams_Activator::IsSchemaOutdated()) { KornSW_PayedStreams_Activator::EnsureSchema(); }
         $AdministratorRole = get_role('administrator');
         if ($AdministratorRole !== null && !$AdministratorRole->has_cap('manage_kornsw_payedstreams')) { $AdministratorRole->add_cap('manage_kornsw_payedstreams'); }
         $Repository=new KornSW_PayedStreams_Repository();

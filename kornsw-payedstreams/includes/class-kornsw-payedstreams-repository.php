@@ -64,7 +64,14 @@ class KornSW_PayedStreams_Repository
     public function GetVideos()
     {
         global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$this->Table('videos')} ORDER BY title ASC", ARRAY_A);
+        // content_date (UTC): the publication date delivered by the source, or - if the source
+        // does not provide a usable one - the moment the content first appeared during a sync.
+        return $wpdb->get_results(
+            "SELECT *, COALESCE(published_at, first_seen_at, synced_at) AS content_date
+             FROM {$this->Table('videos')}
+             ORDER BY content_date DESC, title ASC",
+            ARRAY_A
+        );
     }
 
     public function GetVideo($ExternalId)
@@ -77,6 +84,13 @@ class KornSW_PayedStreams_Repository
     {
         global $wpdb;
         $Table = $this->Table('videos');
+        $Now = gmdate('Y-m-d H:i:s');
+        $Existing = $this->GetVideo($Video['external_id']);
+        $PublishedAt = isset($Video['published_at']) ? $this->NormalizeUtcDateTime($Video['published_at']) : null;
+        if ($PublishedAt === null && $Existing && !empty($Existing['published_at'])) {
+            // Keep a previously known publication date if the source omits it this time.
+            $PublishedAt = $Existing['published_at'];
+        }
         $Data = array(
             'external_id' => (string)$Video['external_id'],
             'title' => (string)$Video['title'],
@@ -88,13 +102,40 @@ class KornSW_PayedStreams_Repository
             'content_url' => isset($Video['content_url']) ? (string)$Video['content_url'] : '',
             'post_url' => isset($Video['post_url']) ? (string)$Video['post_url'] : '',
             'raw_json' => wp_json_encode($Video['raw'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'synced_at' => gmdate('Y-m-d H:i:s'),
+            'published_at' => $PublishedAt,
+            'synced_at' => $Now,
         );
-        if ($this->GetVideo($Video['external_id'])) {
+        if ($Existing) {
+            if (empty($Existing['first_seen_at'])) { $Data['first_seen_at'] = $Now; }
             $wpdb->update($Table, $Data, array('external_id' => $Video['external_id']));
         } else {
+            $Data['first_seen_at'] = $Now;
             $wpdb->insert($Table, $Data);
         }
+    }
+
+    /**
+     * Normalizes a date/time value (string in UTC or unix timestamp) to 'Y-m-d H:i:s' (UTC).
+     * Returns null for empty, invalid or implausible values (e.g. '0000-00-00 00:00:00').
+     */
+    private function NormalizeUtcDateTime($Value)
+    {
+        if ($Value === null || $Value === '' || $Value === false) { return null; }
+        if (is_int($Value)) {
+            $Timestamp = $Value;
+        } else {
+            $Text = trim((string)$Value);
+            if ($Text === '' || strpos($Text, '0000-00-00') === 0) { return null; }
+            try {
+                $Parsed = new DateTimeImmutable($Text, new DateTimeZone('UTC'));
+            } catch (Exception $Ex) {
+                return null;
+            }
+            $Timestamp = $Parsed->getTimestamp();
+        }
+        // Reject obviously wrong values (before 2000 or more than one day in the future).
+        if ($Timestamp < 946684800 || $Timestamp > time() + DAY_IN_SECONDS) { return null; }
+        return gmdate('Y-m-d H:i:s', $Timestamp);
     }
 
     public function DeleteVideosBySource($SourceType)

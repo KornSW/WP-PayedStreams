@@ -51,6 +51,7 @@ class KornSW_PayedStreams_Local_Content
                 'source_ref' => (string)$Attachment->ID,
                 'content_url' => $Url,
                 'post_url' => '',
+                'published_at' => (string)$Attachment->post_date_gmt,
                 'raw' => array('attachment_id' => intval($Attachment->ID), 'mime_type' => get_post_mime_type($Attachment->ID)),
             ));
             $Count++;
@@ -107,6 +108,7 @@ class KornSW_PayedStreams_Local_Content
                 'source_ref' => $Relative . '/' . $File,
                 'content_url' => trailingslashit($BaseUrl) . rawurlencode($File),
                 'post_url' => '',
+                'published_at' => (int)filemtime($Full),
                 'raw' => array('relative_path' => $Relative . '/' . $File, 'extension' => $Ext),
             ));
             $Count++;
@@ -139,6 +141,7 @@ class KornSW_PayedStreams_Local_Content
                 'source_ref' => (string)$Post->ID,
                 'content_url' => '',
                 'post_url' => get_permalink($Post->ID),
+                'published_at' => (string)$Post->post_date_gmt,
                 'raw' => array('post_id' => intval($Post->ID), 'excerpt' => wp_strip_all_tags(get_the_excerpt($Post->ID))),
             ));
             $Count++;

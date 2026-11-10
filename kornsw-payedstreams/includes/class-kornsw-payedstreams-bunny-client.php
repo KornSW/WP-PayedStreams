@@ -73,7 +73,19 @@ class KornSW_PayedStreams_Bunny_Client
         $Thumb='';
         if (!empty($Row['thumbnailUrl'])) { $Thumb=$Row['thumbnailUrl']; }
         elseif (!empty($Row['thumbnailFileName']) && $this->CdnHostname !== '' && $Id !== '') { $Thumb='https://' . preg_replace('/^https?:\/\//','',$this->CdnHostname) . '/' . rawurlencode($Id) . '/' . rawurlencode($Row['thumbnailFileName']); }
-        return array('external_id'=>(string)$Id,'title'=>(string)(isset($Row['title'])?$Row['title']:$Id),'thumbnail_url'=>$Thumb,'duration_seconds'=>isset($Row['length'])?intval(round($Row['length'])):(isset($Row['duration'])?intval(round($Row['duration'])):0),'status'=>(string)(isset($Row['status'])?$Row['status']:'unknown'),'raw'=>$Row);
+        return array('external_id'=>(string)$Id,'title'=>(string)(isset($Row['title'])?$Row['title']:$Id),'thumbnail_url'=>$Thumb,'duration_seconds'=>isset($Row['length'])?intval(round($Row['length'])):(isset($Row['duration'])?intval(round($Row['duration'])):0),'status'=>(string)(isset($Row['status'])?$Row['status']:'unknown'),'published_at'=>$this->ExtractPublishedAt($Row),'raw'=>$Row);
+    }
+
+    /**
+     * Bunny delivers 'dateUploaded' as UTC timestamp without zone suffix (e.g. 2024-05-01T10:20:30.123).
+     * Returns '' if absent - the repository then falls back to the first sync in which the video appeared.
+     */
+    private function ExtractPublishedAt($Row)
+    {
+        foreach (array('dateUploaded','dateCreated','createdAt') as $Key) {
+            if (!empty($Row[$Key]) && is_string($Row[$Key])) { return $Row[$Key]; }
+        }
+        return '';
     }
 
     public function CreateSignedEmbedUrl($VideoId, $Autoplay=false)

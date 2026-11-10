@@ -144,20 +144,13 @@ class KornSW_PayedStreams_Shortcode
             );
         }
 
-        usort($Cards, function($A, $B) {
-            $RankOf = function($Card) {
-                if ($Card['video']['source_type'] === 'post') { return 5; }
-                $Progress = $Card['progress'];
-                if ($Progress && intval($Progress['completed']) === 0 && (intval($Progress['last_position_seconds']) > 0 || floatval($Progress['progress_percent']) > 0)) { return 0; }
-                if ($Card['purchased'] || $Card['reason'] === 'purchase' || $Card['reason'] === 'manual') { return 1; }
-                if ($Card['reason'] === 'role') { return 2; }
-                if ($Card['reason'] === 'public') { return 3; }
-                return 4;
-            };
-            $Ra = $RankOf($A);
-            $Rb = $RankOf($B);
-            return $Ra === $Rb ? strcasecmp($A['video']['title'], $B['video']['title']) : $Ra <=> $Rb;
-        });
+        // The cards keep the repository order: newest content first (content_date DESC).
+        $Years = array();
+        foreach ($Cards as $Card) {
+            $Year = $this->GetContentYear($Card['video']);
+            if ($Year !== '') { $Years[$Year] = true; }
+        }
+        krsort($Years, SORT_STRING);
 
         $DeepVideo = isset($_GET['video']) ? sanitize_text_field(wp_unslash($_GET['video'])) : '';
         $AutoPlay = isset($_GET['autoplay']) && wp_unslash($_GET['autoplay']) === '1';
@@ -192,12 +185,18 @@ class KornSW_PayedStreams_Shortcode
             if ($Count <= 1 || !isset($ProductNames[$ProductId])) { continue; }
             echo '<option value="product:' . esc_attr($ProductId) . '">' . esc_html($ProductNames[$ProductId] . ' (Bundle)') . '</option>';
         }
+        if (!empty($Years)) {
+            echo '<optgroup label="Jahr">';
+            foreach (array_keys($Years) as $Year) { echo '<option value="year:' . esc_attr($Year) . '">' . esc_html('Jahr ' . $Year) . '</option>'; }
+            echo '</optgroup>';
+        }
         echo '</select></label>';
+        echo '<label class="kornsw-ps-search-label">Suche <input type="search" class="kornsw-ps-search" placeholder="Titel durchsuchen …" autocomplete="off"></label>';
         if (is_user_logged_in()) { echo '<button type="button" class="kornsw-ps-purchases-open" title="Meine Käufe" aria-label="Meine Käufe">🛍️</button>'; } else { echo '<span class="kornsw-ps-login-warning-inline">Sie sind nicht eingeloggt und sehen daher keine gekauften Videos – <a href="' . esc_url($this->GetMemberUrl()) . '">hier anmelden</a>!</span>'; }
         echo '</div>';
         echo '<div class="kornsw-ps-grid">';
         foreach ($Cards as $Card) { $this->RenderCard($Card); }
-        echo '</div></div></div>';
+        echo '</div><p class="kornsw-ps-empty" hidden>Keine passenden Inhalte gefunden.</p></div></div>';
         if (is_user_logged_in()) {
             echo '<template class="kornsw-ps-purchases-template">' . $this->GetPurchasesMarkup($UserId, true) . '</template>';
         }
@@ -266,6 +265,8 @@ class KornSW_PayedStreams_Shortcode
             'data-source'=>$V['source_type'],
             'data-target'=>$V['post_url'],
             'data-member-locked'=>!empty($Card['member_locked']) ? '1' : '0',
+            'data-title'=>$this->StripMediaExtension($V['title']),
+            'data-year'=>$this->GetContentYear($V),
             'data-access-mode'=>!empty($Card['member_locked']) ? 'member-login' : ($Allowed ? 'play' : (!empty($Card['has_purchase_offer']) ? 'purchase' : 'none')),
         );
         $Title = $this->StripMediaExtension($V['title']);
@@ -283,6 +284,8 @@ class KornSW_PayedStreams_Shortcode
         // Public/free videos intentionally have no status icon. External posts retain their text overlay above.
         if ($Progress && floatval($Progress['progress_percent']) > 0) { echo '<span class="kornsw-ps-progress"><i style="width:' . esc_attr(min(100, floatval($Progress['progress_percent']))) . '%"></i></span>'; }
         echo '</div><div class="kornsw-ps-card-body"><strong>' . esc_html($Title) . '</strong>';
+        $ContentDate = $this->FormatContentDate($V);
+        if ($ContentDate !== '') { echo '<span class="kornsw-ps-card-date">' . esc_html($ContentDate) . '</span>'; }
         if ($V['duration_seconds']) { echo '<span>' . esc_html($this->FormatDuration($V['duration_seconds'])) . '</span>'; }
         elseif ($V['source_type'] === 'post') { echo '<span>Außerhalb der Mediathek öffnen ↗</span>'; }
         if (!$Allowed) { $Price = $this->LowestPrice($Card['products']); if ($Price !== '') { echo '<span class="kornsw-ps-card-price">ab ' . esc_html($Price) . '</span>'; } }
@@ -307,6 +310,34 @@ class KornSW_PayedStreams_Shortcode
             'checkout_url'=>$Checkout,
             'featured'=>intval($Product['featured']) === 1,
         );
+    }
+
+    /**
+     * Returns the content date (UTC in the database) as unix timestamp, or 0 if unknown.
+     */
+    private function GetContentTimestamp($Video)
+    {
+        if (empty($Video['content_date'])) { return 0; }
+        $Timestamp = strtotime($Video['content_date'] . ' UTC');
+        if ($Timestamp === false) { return 0; }
+        return $Timestamp;
+    }
+
+    /**
+     * Year of the content date in the site's time zone ('' if unknown) - used by the year filter.
+     */
+    private function GetContentYear($Video)
+    {
+        $Timestamp = $this->GetContentTimestamp($Video);
+        if ($Timestamp === 0) { return ''; }
+        return (string)wp_date('Y', $Timestamp);
+    }
+
+    private function FormatContentDate($Video)
+    {
+        $Timestamp = $this->GetContentTimestamp($Video);
+        if ($Timestamp === 0) { return ''; }
+        return (string)wp_date('d.m.Y', $Timestamp);
     }
 
     private function StripMediaExtension($Text)

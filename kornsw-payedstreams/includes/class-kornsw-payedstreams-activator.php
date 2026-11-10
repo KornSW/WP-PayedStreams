@@ -3,6 +3,18 @@ if (!defined('ABSPATH')) { exit; }
 
 class KornSW_PayedStreams_Activator
 {
+    /**
+     * Revision of the table layout. Raise it whenever EnsureSchema() changes, so the upgrade
+     * also runs on installations whose plugin version string did not change (e.g. dev deployments).
+     * 2 = videos.published_at / videos.first_seen_at (date sorting of the media library).
+     */
+    const SCHEMA_REVISION = 2;
+
+    public static function IsSchemaOutdated()
+    {
+        return intval(get_option('kornsw_ps_db_schema_revision', 0)) < self::SCHEMA_REVISION;
+    }
+
     public static function Activate()
     {
         self::EnsureSchema();
@@ -58,10 +70,16 @@ class KornSW_PayedStreams_Activator
             content_url text NULL,
             post_url text NULL,
             raw_json longtext NULL,
+            published_at datetime NULL,
+            first_seen_at datetime NULL,
             synced_at datetime NULL,
             PRIMARY KEY (id),
             UNIQUE KEY uq_external_id (external_id)
         ) {$C};");
+
+        // Rows that existed before first_seen_at was introduced: the last sync time is the best
+        // available approximation of when the content showed up (UTC, like all stored times).
+        $wpdb->query("UPDATE {$P}videos SET first_seen_at = COALESCE(synced_at, UTC_TIMESTAMP()) WHERE first_seen_at IS NULL");
 
         dbDelta("CREATE TABLE {$P}mappings (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -158,5 +176,6 @@ class KornSW_PayedStreams_Activator
         ) {$C};");
 
         update_option('kornsw_ps_db_version', KORNSW_PAYEDSTREAMS_VERSION, false);
+        update_option('kornsw_ps_db_schema_revision', self::SCHEMA_REVISION, false);
     }
 }
